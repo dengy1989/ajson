@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dengy1989/ajson"
+	"github.com/spyzhov/ajson"
 )
 
 var version = "v0.9.3"

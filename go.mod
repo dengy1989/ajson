@@ -1,3 +1,3 @@
-module github.com/dengy1989/ajson
+module github.com/spyzhov/ajson
 
 go 1.16
