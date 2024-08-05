@@ -950,3 +950,16 @@ func (n *Node) root() (node *Node) {
 func (n *Node) SetKey(newKey string) {
 	n.key = &newKey
 }
+
+func (n *Node) DelChildKey(childKey string) {
+	if n.children != nil {
+		delete(n.children, childKey)
+	}
+}
+
+func (n *Node) AddChild(childKey string, child *Node) {
+	if n.children == nil {
+		n.children = make(map[string]*Node)
+	}
+	n.children[childKey] = child
+}
