@@ -949,5 +949,4 @@ func (n *Node) root() (node *Node) {
 
 func (n *Node) SetKey(newKey string) {
 	n.key = &newKey
-	n.dirty = true
 }

@@ -1,7 +1,13 @@
 package ajson
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -192,5 +198,248 @@ func TestMarshal_Errors(t *testing.T) {
 				t.Errorf("wrong result")
 			}
 		})
+	}
+}
+
+func TestMarshal_String(t *testing.T) {
+	formatBody := `{"field1":{"sub_field":"a","sub2":"b"},"field2":[1,2,4]}`
+	//	formatBody := `{
+	//     "field1": {
+	//        "sub_field": "a",
+	//        "sub2": "b"
+	//    },
+	//    "field2": [
+	//        1,
+	//        2,
+	//        4
+	//    ]
+	//}`
+	fieldName := "field1.sub_field"
+	jsonPath := fmt.Sprintf("$.%s", fieldName)
+
+	rootNode, err := Unmarshal([]byte(formatBody))
+
+	commands, err := ParseJSONPath(jsonPath)
+	if err != nil {
+		return
+	}
+
+	nodes, err := ApplyJSONPath(rootNode, commands)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(len(nodes))
+	node := nodes[0]
+	fmt.Println(node.Key())
+	fmt.Println(string(node.Source()))
+	oldStr := fmt.Sprintf(`"%s":%s`, node.Key(), node.Source())
+	newStr := fmt.Sprintf(`"%s":%s`, fieldName, node.Source())
+
+	byteArr, err := Marshal(rootNode)
+	fmt.Println(err)
+	fmt.Println(string(byteArr))
+
+	body := strings.Replace(formatBody, oldStr, newStr, 1)
+	fmt.Println(body)
+
+}
+
+func TestMarshal_Array(t *testing.T) {
+	formatBody := `{"field1":{"sub_field":"a","sub2":"b"},"field2":[1,2,4]}`
+
+	fieldName := "field2"
+	jsonPath := fmt.Sprintf("$.%s", fieldName)
+
+	rootNode, err := Unmarshal([]byte(formatBody))
+
+	commands, err := ParseJSONPath(jsonPath)
+	if err != nil {
+		return
+	}
+
+	nodes, err := ApplyJSONPath(rootNode, commands)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(len(nodes))
+	node := nodes[0]
+	fmt.Println(node.Key())
+	fmt.Println(string(node.Source()))
+	oldStr := fmt.Sprintf(`"%s":%s`, node.Key(), node.Source())
+	newStr := fmt.Sprintf(`"%s":%s`, fieldName, node.Source())
+
+	byteArr, err := Marshal(rootNode)
+	fmt.Println(err)
+	fmt.Println(string(byteArr))
+
+	body := strings.Replace(formatBody, oldStr, newStr, 1)
+	fmt.Println(body)
+
+}
+
+func TestMarshal_Array_Ele(t *testing.T) {
+	formatBody := `{"field1":{"sub_field":"a","sub2":"b"},"field2":[1,2,4]}`
+
+	fieldName := "field2[0]"
+	jsonPath := fmt.Sprintf("$.%s", fieldName)
+
+	rootNode, err := Unmarshal([]byte(formatBody))
+
+	commands, err := ParseJSONPath(jsonPath)
+	if err != nil {
+		return
+	}
+
+	nodes, err := ApplyJSONPath(rootNode, commands)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(len(nodes))
+	node := nodes[0]
+	fmt.Println(node.Key())
+	fmt.Println(string(node.Source()))
+	key := node.Key()
+	source := node.Source()
+	if key == "" {
+		key = node.Parent().Key()
+		source = node.Parent().Source()
+	}
+	oldStr := fmt.Sprintf(`"%s":%s`, key, source)
+	newStr := fmt.Sprintf(`"%s":%s`, fieldName, source)
+
+	byteArr, err := Marshal(rootNode)
+	fmt.Println(err)
+	fmt.Println(string(byteArr))
+
+	body := strings.Replace(formatBody, oldStr, newStr, 1)
+	fmt.Println(body)
+
+}
+
+func Test_getReqRespBodyField2LineNumMap(t *testing.T) {
+	bodyStr := `{"field1":{"sub_field":"a","sub2":"b"},"field2":[1,2,4],"field3":[{"sub_field":"a","sub2":"b"},{"sub_field":"a","sub2":"b"}]}`
+	fieldNames := []string{"field3[1].sub_field"}
+	//fieldNames := []string{"field3[0].sub_field"}
+
+	result, err := getReqRespBodyField2LineNumMap(context.Background(), bodyStr, fieldNames)
+	fmt.Println(result)
+	fmt.Println(err)
+}
+
+const (
+	NewVarTemplate = "##var%d"
+)
+
+var RegNewVar = regexp.MustCompile("##var(\\d+?)")
+
+func getReqRespBodyField2LineNumMap(ctx context.Context, bodyStr string, fieldNames []string) (map[string]int, error) {
+	rootNode, err := Unmarshal([]byte(bodyStr))
+	if err != nil {
+		fmt.Println("")
+		return nil, err
+	}
+
+	newVarStr2FieldNameMap := make(map[string]string)
+	for i, fieldName := range fieldNames {
+		jsonPath := fmt.Sprintf("$.%s", fieldName)
+
+		commands, err := ParseJSONPath(jsonPath)
+		if err != nil {
+			fmt.Println("ajson.ParseJSONPath exception")
+			continue
+		}
+
+		nodes, err := ApplyJSONPath(rootNode, commands)
+		if err != nil {
+			fmt.Println("ajson.ApplyJSONPath exception")
+			continue
+		}
+
+		if len(nodes) < 1 {
+			fmt.Println("json parse empty node",
+				bodyStr, jsonPath)
+			continue
+		}
+
+		firstNode := nodes[0]
+		notEmptyNode := getJsonNotEmptyKeyNode(firstNode)
+		oldKey := notEmptyNode.Key()
+
+		varStr := fmt.Sprintf(NewVarTemplate, i)
+		newKey := oldKey + varStr
+		if notEmptyNode != nil {
+			notEmptyNode.key = &newKey
+		}
+
+		if notEmptyNode.parent != nil {
+			pNode := notEmptyNode.parent
+			delete(pNode.children, oldKey)
+			pNode.children[newKey] = notEmptyNode
+		}
+
+		newVarStr2FieldNameMap[varStr] = fieldName
+	}
+
+	byteArr, _ := MarshalNewKey(rootNode)
+	fmt.Println(string(byteArr))
+	bodyStrBak := string(byteArr)
+
+	var formatBodyStrBak bytes.Buffer
+	_ = json.Indent(&formatBodyStrBak, []byte(bodyStrBak), "", "    ")
+	bodyLines := strings.Split(formatBodyStrBak.String(), "\n")
+
+	fieldName2LineNumMap := make(map[string]int)
+	for i, bodyLine := range bodyLines {
+		matchArr := RegNewVar.FindStringSubmatch(bodyLine)
+		if matchArr == nil || len(matchArr) < 1 {
+			continue
+		}
+
+		varIdStr := matchArr[1]
+		varId, err := strconv.Atoi(varIdStr)
+		if err != nil {
+			fmt.Println("strconv.Atoi exception", varIdStr, err)
+			continue
+		}
+
+		varStr := fmt.Sprintf(NewVarTemplate, varId)
+		fieldName, ok := newVarStr2FieldNameMap[varStr]
+		if ok {
+			fieldName2LineNumMap[fieldName] = i + 1
+		}
+	}
+
+	return fieldName2LineNumMap, nil
+}
+
+func getJsonNotEmptyKeyNode(node *Node) *Node {
+	if node == nil {
+		return nil
+	}
+
+	key := node.Key()
+	if key == "" {
+		return getJsonNotEmptyKeyNode(node.Parent())
+	}
+	return node
+}
+
+func Test_printBorder(t *testing.T) {
+	bodyStr := `{"field1":{"sub_field":"a","sub2":"b"},"field2":[1,2,4],"field3":[{"sub_field":"a","sub2":"b"},{"sub_field":"a","sub2":"b"}]}`
+
+	rootNode, _ := Unmarshal([]byte(bodyStr))
+	printBorder(rootNode)
+}
+
+func printBorder(node *Node) {
+	if node != nil {
+		fmt.Println(node.Key(), ": ", node.borders)
+	}
+	children := node.children
+	for _, cNode := range children {
+		printBorder(cNode)
 	}
 }
