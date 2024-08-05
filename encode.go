@@ -148,14 +148,14 @@ func MarshalNewKey(node *Node) (result []byte, err error) {
 	case Object:
 		result = append(result, bracesL)
 		bValue = false
-		for key, child := range node.children {
+		for _, child := range node.children {
 			if bValue {
 				result = append(result, coma)
 			} else {
 				bValue = true
 			}
 			result = append(result, quotes)
-			result = append(result, quoteString(key, true)...)
+			result = append(result, quoteString(child.Key(), true)...)
 			result = append(result, quotes, colon)
 			oValue, err = MarshalNewKey(child)
 			if err != nil {
