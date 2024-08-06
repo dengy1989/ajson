@@ -148,7 +148,7 @@ func MarshalNewKey(node *Node) (result []byte, err error) {
 	case Object:
 		result = append(result, bracesL)
 		bValue = false
-		for _, child := range node.children {
+		for _, child := range node.childList {
 			if bValue {
 				result = append(result, coma)
 			} else {

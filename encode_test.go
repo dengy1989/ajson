@@ -2,7 +2,6 @@ package ajson
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -321,12 +320,13 @@ func TestMarshal_Array_Ele(t *testing.T) {
 
 func Test_getReqRespBodyField2LineNumMap(t *testing.T) {
 	bodyStr := `{"field1":{"sub_field":"a","sub2":"b"},"field2":[1,2,4],"field3":[{"sub_field":"a","sub2":"b"},{"sub_field":"a","sub2":"b"}]}`
-	fieldNames := []string{"field3[1].sub_field"}
-	//fieldNames := []string{"field3[0].sub_field"}
+	//fieldNames := []string{"field3[1].sub_field"}
+	fieldNames := []string{"field3[0].sub_field"}
 
-	result, err := getReqRespBodyField2LineNumMap(context.Background(), bodyStr, fieldNames)
-	fmt.Println(result)
-	fmt.Println(err)
+	for i := 0; i < 100; i++ {
+		result, _ := getReqRespBodyField2LineNumMap(bodyStr, fieldNames)
+		fmt.Println(result)
+	}
 }
 
 const (
@@ -335,7 +335,7 @@ const (
 
 var RegNewVar = regexp.MustCompile("##var(\\d+?)")
 
-func getReqRespBodyField2LineNumMap(ctx context.Context, bodyStr string, fieldNames []string) (map[string]int, error) {
+func getReqRespBodyField2LineNumMap(bodyStr string, fieldNames []string) (map[string]int, error) {
 	rootNode, err := Unmarshal([]byte(bodyStr))
 	if err != nil {
 		fmt.Println("")
@@ -374,24 +374,26 @@ func getReqRespBodyField2LineNumMap(ctx context.Context, bodyStr string, fieldNa
 			notEmptyNode.key = &newKey
 		}
 
-		if notEmptyNode.parent != nil {
-			pNode := notEmptyNode.parent
-			delete(pNode.children, oldKey)
-			pNode.children[newKey] = notEmptyNode
-		}
+		//if notEmptyNode.parent != nil {
+		//	pNode := notEmptyNode.parent
+		//	delete(pNode.children, oldKey)
+		//	pNode.children[newKey] = notEmptyNode
+		//}
 
 		newVarStr2FieldNameMap[varStr] = fieldName
 	}
 
 	byteArr, _ := MarshalNewKey(rootNode)
-	fmt.Println(string(byteArr))
 	bodyStrBak := string(byteArr)
+	//fmt.Println(bodyStrBak)
 
+	//格式化json
 	var formatBodyStrBak bytes.Buffer
 	_ = json.Indent(&formatBodyStrBak, []byte(bodyStrBak), "", "    ")
-	bodyLines := strings.Split(formatBodyStrBak.String(), "\n")
 
+	//定位字段所在行
 	fieldName2LineNumMap := make(map[string]int)
+	bodyLines := strings.Split(formatBodyStrBak.String(), "\n")
 	for i, bodyLine := range bodyLines {
 		matchArr := RegNewVar.FindStringSubmatch(bodyLine)
 		if matchArr == nil || len(matchArr) < 1 {

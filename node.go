@@ -22,15 +22,16 @@ import (
 // Every type has its own methods to be called.
 // Every Node contains link to a byte data, parent and children, also calculated type of value, atomic value and internal information.
 type Node struct {
-	parent   *Node
-	children map[string]*Node
-	key      *string
-	index    *int
-	_type    NodeType
-	data     *[]byte
-	borders  [2]int
-	value    atomic.Value
-	dirty    bool
+	parent    *Node
+	children  map[string]*Node
+	childList []*Node
+	key       *string
+	index     *int
+	_type     NodeType
+	data      *[]byte
+	borders   [2]int
+	value     atomic.Value
+	dirty     bool
 }
 
 // NodeType is a kind of reflection of JSON type to a type of golang
@@ -160,11 +161,13 @@ func newNode(parent *Node, buf *buffer, _type NodeType, key **string) (current *
 			size := len(parent.children)
 			current.index = &size
 			parent.children[strconv.Itoa(size)] = current
+			parent.childList = append(parent.childList, current)
 		} else if parent.IsObject() {
 			if *key == nil {
 				err = errorSymbol(buf)
 			} else {
 				parent.children[**key] = current
+				parent.childList = append(parent.childList, current)
 			}
 		} else {
 			err = errorSymbol(buf)
@@ -949,17 +952,4 @@ func (n *Node) root() (node *Node) {
 
 func (n *Node) SetKey(newKey string) {
 	n.key = &newKey
-}
-
-func (n *Node) DelChildKey(childKey string) {
-	if n.children != nil {
-		delete(n.children, childKey)
-	}
-}
-
-func (n *Node) AddChild(childKey string, child *Node) {
-	if n.children == nil {
-		n.children = make(map[string]*Node)
-	}
-	n.children[childKey] = child
 }
