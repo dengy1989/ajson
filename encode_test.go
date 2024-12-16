@@ -445,3 +445,31 @@ func printBorder(node *Node) {
 		printBorder(cNode)
 	}
 }
+
+func Test_m(t *testing.T) {
+	for i := 0; i < 50; i++ {
+		fmt.Println(test())
+	}
+}
+
+func test() string {
+	bodyStr := `{"PayoutRuleID":"7301896625109403654","PayoutRule":{"Tiers":[{"Tier":1,"Amount":"300","RankStart":1,"RankEnd":1,"Label":"","ValueStart":0,"ValueEnd":0,"ImpressionPerClip":"0"},{"Tier":2,"Amount":"100","RankStart":2,"RankEnd":5,"Label":"","ValueStart":0,"ValueEnd":0,"ImpressionPerClip":"0"},{"Tier":3,"Amount":"40","RankStart":6,"RankEnd":10,"Label":"","ValueStart":0,"ValueEnd":0,"ImpressionPerClip":"0"},{"Tier":4,"Amount":"20","RankStart":11,"RankEnd":15,"Label":"","ValueStart":0,"ValueEnd":0,"ImpressionPerClip":"0"}]},"BaseResp":null}`
+	respRootNode, _ := Unmarshal([]byte("{}"))
+
+	bodyNode, bodyErr := Unmarshal([]byte(bodyStr))
+	if bodyErr == nil {
+		_ = respRootNode.AppendObject("body", bodyNode)
+	}
+
+	statusCodeNode := NumericNode("status_code", float64(200))
+	_ = respRootNode.AppendObject("status_code", statusCodeNode)
+
+	if respRootNode != nil {
+		//newRespRootBytes, _ := MarshalNewKey(respRootNode)
+		newRespRootBytes, _ := Marshal(respRootNode)
+		respStr := string(newRespRootBytes)
+		return respStr
+	} else {
+		return ""
+	}
+}

@@ -319,10 +319,12 @@ func (n *Node) appendNode(key *string, value *Node) error {
 			}
 		}
 		n.children[*key] = value
+		n.childList = append(n.childList, value)
 	} else {
 		index := len(n.children)
 		value.index = &index
 		n.children[strconv.Itoa(index)] = value
+		n.childList = append(n.childList, value)
 	}
 	return nil
 }
