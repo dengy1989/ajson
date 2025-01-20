@@ -112,7 +112,8 @@ func MarshalNewKey(node *Node) (result []byte, err error) {
 			return nil, err
 		}
 		//result = append(result, strconv.FormatFloat(nValue, 'g', -1, 64)...)
-		result = append(result, fmt.Sprintf("%v", nValue)...)
+		nValueStr := fmt.Sprintf("%f", nValue)
+		result = append(result, nValueStr...)
 	case String:
 		sValue, err = node.GetString()
 		if err != nil {
