@@ -1,6 +1,7 @@
 package ajson
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -110,7 +111,8 @@ func MarshalNewKey(node *Node) (result []byte, err error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, strconv.FormatFloat(nValue, 'g', -1, 64)...)
+		//result = append(result, strconv.FormatFloat(nValue, 'g', -1, 64)...)
+		result = append(result, fmt.Sprintf("%v", nValue)...)
 	case String:
 		sValue, err = node.GetString()
 		if err != nil {
